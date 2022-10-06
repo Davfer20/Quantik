@@ -85,7 +85,8 @@ datos segment
 
     jugadorRepetidoMsg         db "El jugador no puede jugar 2 veces seguidas",10,13,'$'
     jugadorInvalidoMsg         db "El color del jugador no es valido",10,13,'$'
-    msgLetraInvalida           db "La letra que se ingreso no esta dentro del rango permitido",10,13,'$'
+    msgCaracterInvalido        db "El carcater que ingreso no es valido, puede ser la mayuscula o el caracter",10,13,'$'
+    msgLetraInvalida           db "La letra que se ingreso de coordenadas no esta dentro del rango permitido",10,13,'$'
 
     msgETablero                db "Hubo un error al escribir el tablero dentro del archivo",10,13,'$'
     msgBienTab                 db "Se ha guardado la jugada exitosamente",10,13,'$'
@@ -616,19 +617,42 @@ actualizarTablero proc near
     comparacionBlanas:          shr    cl,1
                                 jc     jugadorRepetido
     ;Aca se valida las letras
-                                jmp    sigueInsert
-
-    comparacionNegras:          shr    cl,1
-                                jnc    jugadorRepetido
-    ;Aca se valida las letras
-            
-    sigueInsert:                mov    byte ptr turnoJugador[di], al
+                                mov    byte ptr turnoJugador[di], al
                                 inc    si
                                 inc    si
 
                                 xor    di,di
                                 mov    al, byte ptr es:[si]
-                                mov    byte ptr pieza[di], al
+                                cmp    al, 'E'
+                                je     sigueInsert
+                                cmp    al, 'C'
+                                je     sigueInsert
+                                cmp    al, 'V'
+                                je     sigueInsert
+                                cmp    al, 'D'
+                                je     sigueInsert
+                                jmp    caracterJuegoInvalido
+
+    comparacionNegras:          shr    cl,1
+                                jnc    jugadorRepetido
+    ;Aca se valida las letras
+                                mov    byte ptr turnoJugador[di], al
+                                inc    si
+                                inc    si
+
+                                xor    di,di
+                                mov    al, byte ptr es:[si]
+                                cmp    al, 'e'
+                                je     sigueInsert
+                                cmp    al, 'c'
+                                je     sigueInsert
+                                cmp    al, 'v'
+                                je     sigueInsert
+                                cmp    al, 'd'
+                                je     sigueInsert
+                                jmp    caracterJuegoInvalido
+                                           
+    sigueInsert:                mov    byte ptr pieza[di], al
                                 inc    si
                                 inc    si
 
@@ -650,6 +674,11 @@ actualizarTablero proc near
     actualizacionCorrecta:      ret
 
     jugadorRepetido:            lea    dx, jugadorRepetidoMsg
+                                mov    ah, 09h
+                                int    21h
+                                jmp    terminarAcualizacionTablero
+
+    caracterJuegoInvalido:      lea    dx, msgCaracterInvalido
                                 mov    ah, 09h
                                 int    21h
                                 jmp    terminarAcualizacionTablero
@@ -678,12 +707,6 @@ insertarElementoTablero proc near
 
                                 mov    al, pieza
                                 mov    byte ptr tableroActual[di], al
-
-                                call   validacionZona
-                                call   validacionLinea
-                                
-                                
-
                                 ret
 insertarElementoTablero endP
 
@@ -764,10 +787,7 @@ cerrarZonaCorrecta proc near
                                 int    21h
                                 jmp    salir
 
-    salir:                      lea    dx, msgLetraInvalida
-                                mov    ah, 09h
-                                int    21h
-
+    salir:                      
                                 mov    ax, 4C00h
                                 int    21h
 
