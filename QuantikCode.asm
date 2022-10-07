@@ -2,16 +2,32 @@
 ; Jose David Fernandez Salas #2022045079 
 ; Arquitectura de Computadores IC3101 
 ; Profesor: Kirstein Gätjens S.
-; Tarea Numeros MultiIdioma
+; Tarea Quantik
 ; Fecha: 07/10/2022
 
-; ------------------------------Manual-Usuario--------------------------------------
+; ------------------------------Manual-Usuario--------------------------------------------------------------------------------------
+;Este programa consiste en simular de una forma muy basica el juego de mesa llamado quantik. Este juego se trata de mover piezas en un tablero cumplendo una serie de reglas hasta que uno gane y haya un empate por la incapacidad de poner piezas.
+;Existen 3 funciones diferenetes para esta programacion
 
-; ------------------------------Auto-Evaluacion-------------------------------------
+;1. C. Crear una partida. Tiene al capacidad de crear un nuevo tablero o cancelar la creacion para que no se borre nada
+;2. J. Juega el jugador. Se debe indicar varias cosas pero tiene la capacidad de hacer todo tipo de validaciones, ademas determina que color de jugador sigue. Determina si la pocicion que se quiere poner la pieza es legal e indica si un jugador gana
+;3. I. La inteligencia artificial que hace un movimiento dependiendo del valor random que consigue. No tiene parametros y puede ser que se repita mucho 
+; ------------------------------Auto-Evaluacion-------------------------------------------------------------------------------------
 
-;-----------------------------------------------------------------------------------
+; Crear tablero nuevo [A]
+; Cancelar Creacion Tablero [A]
+; Añadir una nueva jugada [A]
+; Toma de datos jugada correcta [A]
+; Validacion datos entrada [A]
+; Validacion sobre espacios posibles [A]
+; Validacion ganar por cuadrante [A]
+; Validacion ganar por filas o columnas [B]
+; Determinar cuando es empate [A]
+; Creacion de Inteligencia Artificial []
+;-----------------------------------------------------------------------------------------------------------------------------------
 
 datos segment
+
 
     ; esferalanca          db 'E'
     ; cuboBlanco           db 'C'
@@ -23,7 +39,7 @@ datos segment
     ; cilindroNegro        db 'd'
 
     bufferTablero              db "....", 10, "....", 10, "....", 10, "...."
-    pruebaTablero              db "cd..ev.........."
+    pruebaTablero              db "........cdev...."
     tableroActual              db 128 dup ( 0 )
     tableroTemporal            db 128 dup ( 0 )
     Buffy                      db 256 dup(0)
@@ -37,6 +53,8 @@ datos segment
 
     columnaEntrada             db ?
     filaEntrada                db ?
+    
+    Semilla                    dw ?
 
 
     fila                       db 3
@@ -340,8 +358,8 @@ validacionZona proc near
                                 mov    al, zonaTemp1
                                 cmp    al, '.'
                                 je     zoneTemp2Comp
-    zoneTem1Comp:               cmp    al, zonaTemp2
-                                je     auxValorRepetidoZona
+    zoneTem1Comp:                                                           ;cmp    al, zonaTemp2
+    ;je     auxValorRepetidoZona
                                 add    al,32
                                 cmp    al, zonaTemp2
                                 je     auxValorRepetidoZona
@@ -350,8 +368,8 @@ validacionZona proc near
                                 je     auxValorRepetidoZona
                                 add    al ,32
 
-                                cmp    al, zonaTemp3
-                                je     auxValorRepetidoZona
+    ;cmp    al, zonaTemp3
+    ;je     auxValorRepetidoZona
                                 add    al,32
                                 cmp    al, zonaTemp3
                                 je     auxValorRepetidoZona
@@ -360,8 +378,8 @@ validacionZona proc near
                                 je     auxValorRepetidoZona
                                 add    al ,32
 
-                                cmp    al, zonaTemp4
-                                je     auxValorRepetidoZona
+    ;cmp    al, zonaTemp4
+    ;je     auxValorRepetidoZona
                                 add    al,32
                                 cmp    al, zonaTemp4
                                 je     auxValorRepetidoZona
@@ -375,8 +393,8 @@ validacionZona proc near
     zoneTemp2Comp:              mov    al, zonaTemp2
                                 cmp    al, '.'
                                 je     zone3Tem3Comp
-                                cmp    al, zonaTemp3
-                                je     valoresRepetidos
+    ;cmp    al, zonaTemp3
+    ;je     valoresRepetidos
                                 add    al,32
                                 cmp    al, zonaTemp3
                                 je     valoresRepetidos
@@ -385,8 +403,8 @@ validacionZona proc near
                                 je     valoresRepetidos
                                 add    al ,32
 
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidos
+    ;cmp    al, zonaTemp4
+    ;je     valoresRepetidos
                                 add    al,32
                                 cmp    al, zonaTemp4
                                 je     valoresRepetidos
@@ -398,8 +416,8 @@ validacionZona proc near
     zone3Tem3Comp:              mov    al, zonaTemp3
                                 cmp    al, '.'
                                 je     zonaCorrecta
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidos
+    ;cmp    al, zonaTemp4
+    ;je     valoresRepetidos
                                 add    al,32
                                 cmp    al, zonaTemp4
                                 je     valoresRepetidos
@@ -431,7 +449,8 @@ validacionLinea proc near
                                 mov    al,columna
                                 mov    columnaAux, al
 
-    filaValidate:               mov    columna,0
+    filaValidate:               xor    ax,ax
+                                mov    columna,0
                                 call   pruebaAccederDatos
                                 mov    zonaTemp1, al
                                 mov    columna,1
@@ -780,7 +799,6 @@ verificarGanadorZona proc near
                                 mov    columna,3
                                 call   pruebaAccederDatos
                                 mov    zonaTemp4, al
-                                jmp    busquedaGanador
 
     busquedaGanador:            xor    ax,ax
                                 mov    ax,1
@@ -826,13 +844,113 @@ verificarGanadorZona proc near
 verificarGanadorZona endp
 
 verificarGanadorColu proc near
+                                mov    al,columna
+                                mov    columnaAux, al
+                                xor    di,di
+                                xor    bx,bx
+
+    buscarFilaGanar:            mov    columna,0
+                                call   pruebaAccederDatos
+                                mov    zonaTemp1, al
+                                mov    columna,1
+                                call   pruebaAccederDatos
+                                mov    zonaTemp2, al
+                                mov    columna,2
+                                call   pruebaAccederDatos
+                                mov    zonaTemp3, al
+                                mov    columna,3
+                                call   pruebaAccederDatos
+                                mov    zonaTemp4, al
 
 
+    busquedaGanadorColu:        xor    ax,ax
+                                mov    ax,1
+                                mul    zonaTemp1
+                                mov    dx,ax
+
+                                mov    ax,1
+                                mul    zonaTemp2
+                                mov    bx,ax
+
+                                add    bx, dx
+
+                                mov    ax,1
+                                mul    zonaTemp3
+                                mov    dx,ax
+
+                                add    bx,dx
+
+                                mov    ax,1
+                                mul    zonaTemp4
+                                mov    dx,ax
+
+                                add    bx, dx
+                                
+                                cmp    bx, 290
+                                je     ganadorBlancasMat
+                                cmp    bx, 418
+                                je     ganadorNegrasMat
+                                jmp    segirColumnas
 
 
+    segirColumnas:              mov    al,columnaAux
+                                xor    di,di
+                                xor    bx,bx
+                                
+                                mov    columna, al
+                                mov    fila,0
+                                call   pruebaAccederDatos
+                                mov    zonaTemp1, al
+                                mov    fila,1
+                                call   pruebaAccederDatos
+                                mov    zonaTemp2, al
+                                mov    fila,2
+                                call   pruebaAccederDatos
+                                mov    zonaTemp3, al
+                                mov    fila,3
+                                call   pruebaAccederDatos
+                                mov    zonaTemp4, al
 
+    busquedaGanadorFila:        xor    ax,ax
+                                mov    ax,1
+                                mul    zonaTemp1
+                                mov    dx,ax
 
+                                mov    ax,1
+                                mul    zonaTemp2
+                                mov    bx,ax
 
+                                add    bx, dx
+
+                                mov    ax,1
+                                mul    zonaTemp3
+                                mov    dx,ax
+
+                                add    bx,dx
+
+                                mov    ax,1
+                                mul    zonaTemp4
+                                mov    dx,ax
+
+                                add    bx, dx
+                                
+                                cmp    bx, 290
+                                je     ganadorBlancasMat
+                                cmp    bx, 418
+                                je     ganadorNegrasMat
+                                ret
+
+    ganadorBlancasMat:          lea    dx, msgBlancasGanan
+                                mov    ah, 09h
+                                int    21h
+                                jmp    salirVictoriaMat
+    
+    ganadorNegrasMat:           lea    dx, msgNegrasGanan
+                                mov    ah, 09h
+                                int    21h
+
+    salirVictoriaMat:           mov    ax, 4C00h
+                                int    21h
 verificarGanadorColu endp
 
 lectorPiezas proc near                                                      ;Valida Jugador que juega
@@ -861,7 +979,16 @@ lectorPiezas proc near                                                      ;Val
                                 je     restartColumna
                                 jmp    loopColumna
 
-    salirLectorPiezas:          ret
+    salirLectorPiezas:          cmp    jugadorActual, 15
+                                je     empate
+                                ret
+
+    empate:                     lea    dx, msgHuboEmpate
+                                mov    ah, 09h
+                                int    21h
+
+                                mov    ax, 4C00h
+                                int    21h
 lectorPiezas endp
 
 cargarTablero proc near
@@ -1035,27 +1162,134 @@ addNuevaJugada proc near
                                 call   actualizarTablero                    ;Obtiene datos entrada
                                 
                                 call   insertarElementoTablero
+
                                 call   recargarVariables
                                 call   validacionLinea
+
                                 call   recargarVariables
                                 call   definirCuadrante
+
                                 call   recargarVariables
                                 call   validacionZona
+
                                 call   recargarVariables
                                 call   verificarGanadorZona
 
-    ;call   verificarGanadorColu
+                                call   recargarVariables
+                                call   verificarGanadorColu
 
                                 call   cerrarZonaCorrecta
 
 addNuevaJugada endp
 
+printAX proc near
+                                push   AX
+                                push   BX
+                                push   CX
+                                push   DX
 
+                                xor    cx, cx
+                                mov    bx, 10
+    ciclo1PAX:                  xor    dx, dx
+                                div    bx
+                                push   dx
+                                inc    cx
+                                cmp    ax, 0
+                                jne    ciclo1PAX
+                                mov    ah, 02h
+    ciclo2PAX:                  pop    DX
+                                add    dl, 30h
+                                int    21h
+                                loop   ciclo2PAX
+
+                                pop    DX
+                                pop    CX
+                                pop    BX
+                                pop    AX
+                                ret
+printAX endP
+
+Randomize Proc
+ 
+                                push   ax
+                                push   cx
+                                push   dx
+
+                                mov    ah, 2Ch
+                                int    21h
+  
+   
+
+  
+                                mov    word ptr Semilla, dx
+
+                                pop    dx
+                                pop    cx
+                                pop    ax
+
+                                ret
+
+Randomize EndP
+
+Random Proc
+                                push   dx
+
+                                mov    ax, Semilla
+
+                                inc    ax
+                                inc    ax
+                                mul    ax
+                                xchg   ah, al
+
+                                mov    Semilla, ax
+
+                                xor    dx, dx
+                                div    bx
+
+                                mov    ax, dx
+
+                                pop    dx
+
+                                ret
+Random Endp
 
 movimientoIA proc
 
+                                call   Randomize
+
+                                mov    cx, 1
+                                mov    bx, 4
+
+    ciclo:                      call   random
+    ;call   printAX
+
+                                mov    dl, 32
+                                mov    ah, 02h
+                                int    21h
+       
+                                loop   ciclo
+                                ret
 
 movimientoIA endp
+
+
+IaController proc near
+
+                                call   movimientoIA
+    ; mov    bx,1
+    ; mul    ax
+    ; mov    ax,bx
+    ; call   printAX
+
+                                mov    bx,1
+                                mul    ax
+                                mov    ax,bx
+                                call   printAX
+                                ret
+
+IaController endp
+
+
 
 cerrarZonaCorrecta proc near
                                 xor    si,si
@@ -1181,10 +1415,7 @@ cerrarZonaIncorrecta endp
                                 mov    ax, pila
                                 mov    ss, ax
 
-    ; mov    zona, 0
-    ; call   verificarGanadorZona
-
-
+    ;call   IaController
                                 mov    si, 80h
                                 mov    cl, byte ptr es:[si]
                                 xor    ch, ch
