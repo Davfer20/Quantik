@@ -23,7 +23,7 @@ datos segment
     ; cilindroNegro        db 'd'
 
     bufferTablero              db "....", 10, "....", 10, "....", 10, "...."
-    pruebaTablero              db ".V.TvYY.VAR.aW.W"
+    pruebaTablero              db "...e...E........"
     tableroActual              db 128 dup ( 0 )
     tableroTemporal            db 128 dup ( 0 )
     Buffy                      db 256 dup(0)
@@ -91,6 +91,7 @@ datos segment
     msgETablero                db "Hubo un error al escribir el tablero dentro del archivo",10,13,'$'
     msgBienTab                 db "Se ha guardado la jugada exitosamente",10,13,'$'
     msgMalTabClose             db "Como la jugada no fue valida se restauro el tablero",10,13,'$'
+    msgCaracterExistente       db "No se puede colocar el caracter porque ya existe uno en esa pocicion",10,13,'$'
 
 
     enterMsg                   db " ",10,13,'$'
@@ -335,21 +336,69 @@ validacionZona proc near
                                 cmp    al, '.'
                                 je     zoneTemp2Comp
     zoneTem1Comp:               cmp    al, zonaTemp2
-                                je     valoresRepetidos
+                                je     auxValorRepetidoZona
+                                add    al,32
+                                cmp    al, zonaTemp2
+                                je     auxValorRepetidoZona
+                                sub    al,64
+                                cmp    al, zonaTemp2
+                                je     auxValorRepetidoZona
+                                add    al ,32
+
                                 cmp    al, zonaTemp3
-                                je     valoresRepetidos
+                                je     auxValorRepetidoZona
+                                add    al,32
+                                cmp    al, zonaTemp3
+                                je     auxValorRepetidoZona
+                                sub    al,64
+                                cmp    al, zonaTemp3
+                                je     auxValorRepetidoZona
+                                add    al ,32
+
                                 cmp    al, zonaTemp4
-                                je     valoresRepetidos
+                                je     auxValorRepetidoZona
+                                add    al,32
+                                cmp    al, zonaTemp4
+                                je     auxValorRepetidoZona
+                                sub    al,64
+                                cmp    al, zonaTemp4
+                                je     auxValorRepetidoZona
+                                jmp    zoneTemp2Comp
+
+    auxValorRepetidoZona:       jmp    valoresRepetidos
+
     zoneTemp2Comp:              mov    al, zonaTemp2
                                 cmp    al, '.'
                                 je     zone3Tem3Comp
                                 cmp    al, zonaTemp3
                                 je     valoresRepetidos
+                                add    al,32
+                                cmp    al, zonaTemp3
+                                je     valoresRepetidos
+                                sub    al,64
+                                cmp    al, zonaTemp3
+                                je     valoresRepetidos
+                                add    al ,32
+
                                 cmp    al, zonaTemp4
                                 je     valoresRepetidos
+                                add    al,32
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidos
+                                sub    al,64
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidos
+                                add    al ,32
+
     zone3Tem3Comp:              mov    al, zonaTemp3
                                 cmp    al, '.'
                                 je     zonaCorrecta
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidos
+                                add    al,32
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidos
+                                sub    al,64
                                 cmp    al, zonaTemp4
                                 je     valoresRepetidos
                                 jmp    zonaCorrecta
@@ -395,29 +444,76 @@ validacionLinea proc near
                                 cmp    al, '.'
                                 je     columna2Val
     columna1Val:                cmp    al, zonaTemp2
-                                je     valoresRepetidosColu
+                                je     auxValorRepetido
+                                add    al,32
+                                cmp    al, zonaTemp2
+                                je     auxValorRepetido
+                                sub    al,64
+                                cmp    al, zonaTemp2
+                                je     auxValorRepetido
+                                add    al ,32
                                 cmp    al, zonaTemp3
-                                je     valoresRepetidosColu
+                                je     auxValorRepetido
+                                add    al,32
+                                cmp    al, zonaTemp3
+                                je     auxValorRepetido
+                                sub    al,64
+                                cmp    al, zonaTemp3
+                                je     auxValorRepetido
+                                add    al ,32
                                 cmp    al, zonaTemp4
-                                je     valoresRepetidosColu
+                                je     auxValorRepetido
+                                add    al,32
+                                cmp    al, zonaTemp4
+                                je     auxValorRepetido
+                                sub    al,64
+                                cmp    al, zonaTemp4
+                                je     auxValorRepetido
+                                add    al ,32
+                                jmp    columna2Val
+
+    auxValorRepetido:           jmp    valoresRepetidosColu
+                                
     columna2Val:                mov    al, zonaTemp2
                                 cmp    al, '.'
                                 je     columna3Val
                                 cmp    al, zonaTemp3
                                 je     valoresRepetidosColu
+                                add    al,32
+                                cmp    al, zonaTemp3
+                                je     valoresRepetidosColu
+                                sub    al,64
+                                cmp    al, zonaTemp3
+                                je     valoresRepetidosColu
+                                add    al ,32
                                 cmp    al, zonaTemp4
                                 je     valoresRepetidosColu
+                                add    al,32
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidosColu
+                                sub    al,64
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidosColu
+                                add    al ,32
     columna3Val:                mov    al, zonaTemp3
                                 cmp    al, '.'
                                 je     columnaValidate
                                 cmp    al, zonaTemp4
                                 je     valoresRepetidosColu
+                                add    al,32
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidosColu
+                                sub    al,64
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidosColu
+                                add    al ,32
                                 jmp    columnaValidate
 
     valoresRepetidosColu:       mov    ah, 09h
                                 lea    dx, msgErrorFilasValidacion
                                 int    21h
                                 jmp    salirFilasColuVal
+    ;TERMINA EL DE FILASSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
 
 
     columnaValidate:            mov    al,columnaAux
@@ -438,25 +534,71 @@ validacionLinea proc near
     comparacionFila:            xor    ax,ax
                                 mov    al, zonaTemp1
                                 cmp    al, '.'
-                                je     FilaVal2
-    FilaVal1:                   cmp    al, zonaTemp2
-                                je     valoresRepetidosFila
+                                je     fil2Val
+    fila1Val:                   cmp    al, zonaTemp2
+                                je     auxColuRepetido
+                                add    al,32
+                                cmp    al, zonaTemp2
+                                je     auxColuRepetido
+                                sub    al,64
+                                cmp    al, zonaTemp2
+                                je     auxColuRepetido
+                                add    al ,32
                                 cmp    al, zonaTemp3
-                                je     valoresRepetidosFila
+                                je     auxColuRepetido
+                                add    al,32
+                                cmp    al, zonaTemp3
+                                je     auxColuRepetido
+                                sub    al,64
+                                cmp    al, zonaTemp3
+                                je     auxColuRepetido
+                                add    al ,32
                                 cmp    al, zonaTemp4
-                                je     valoresRepetidosFila
-    FilaVal2:                   mov    al, zonaTemp2
+                                je     auxColuRepetido
+                                add    al,32
+                                cmp    al, zonaTemp4
+                                je     auxColuRepetido
+                                sub    al,64
+                                cmp    al, zonaTemp4
+                                je     auxColuRepetido
+                                add    al ,32
+                                jmp    fil2Val
+
+    auxColuRepetido:            jmp    valoresRepetidosFila
+                                
+    fil2Val:                    mov    al, zonaTemp2
                                 cmp    al, '.'
-                                je     FilaVal3
+                                je     fila3Val
                                 cmp    al, zonaTemp3
                                 je     valoresRepetidosFila
+                                add    al,32
+                                cmp    al, zonaTemp3
+                                je     valoresRepetidosFila
+                                sub    al,64
+                                cmp    al, zonaTemp3
+                                je     valoresRepetidosFila
+                                add    al ,32
                                 cmp    al, zonaTemp4
                                 je     valoresRepetidosFila
-    FilaVal3:                   mov    al, zonaTemp3
+                                add    al,32
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidosFila
+                                sub    al,64
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidosFila
+                                add    al ,32
+    fila3Val:                   mov    al, zonaTemp3
                                 cmp    al, '.'
                                 je     pocicionCorrecta
                                 cmp    al, zonaTemp4
                                 je     valoresRepetidosFila
+                                add    al,32
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidosFila
+                                sub    al,64
+                                cmp    al, zonaTemp4
+                                je     valoresRepetidosFila
+                                add    al ,32
                                 jmp    pocicionCorrecta
 
     pocicionCorrecta:           mov    ah, 09h
@@ -706,8 +848,19 @@ insertarElementoTablero proc near
                                 call   buscaPosition
 
                                 mov    al, pieza
-                                mov    byte ptr tableroActual[di], al
+                                cmp    byte ptr tableroActual[di], '.'
+                                je     jugadaValida
+                                jmp    jugadaNoValida
+
+    jugadaValida:               mov    byte ptr tableroActual[di], al
                                 ret
+
+    jugadaNoValida:             lea    dx, msgCaracterExistente
+                                mov    ah, 09h
+                                int    21h
+              
+                                mov    ax, 4C00h
+                                int    21h
 insertarElementoTablero endP
 
 addNuevaJugada proc near
@@ -745,7 +898,7 @@ cerrarZonaCorrecta proc near
                                 mov    cx,16
     loopInsertDi:               cmp    bx, 0
                                 je     add10Bx
-                                mov    al, byte ptr tableroActual [si]
+                                mov    al, byte ptr tableroActual[si]
                                 mov    byte ptr Buffy[di], al
                                 inc    di
                                 inc    si
@@ -864,11 +1017,9 @@ cerrarZonaIncorrecta endp
                                 mov    ds, ax
                                 mov    ax, pila
                                 mov    ss, ax
-                                
-    ;call   cerrarZonaCorrecta
-    ;call   addNuevaJugada
 
-    ;call   cargarTablero
+
+                                call   cargarTablero
                                 mov    si, 80h
                                 mov    cl, byte ptr es:[si]
                                 xor    ch, ch
