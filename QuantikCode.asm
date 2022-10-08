@@ -71,7 +71,6 @@ datos segment
     zonaTemp4                  db ?
 
  
-    
 
     Ruta                       db "K:\archivos\Rata.TXT",0
     nombArchivo                db "QUANTIK.TXT",0
@@ -96,7 +95,7 @@ datos segment
     msgErrorColumValidacion    db "Hay vaores en las columnas repetidos, esta incorrecto",10,13,'$'
     msgErrorZona               db "Hubo un error en la toma de zonas ",10,13,'$'
 
-    msgValidacionFilasCorrecta db "La validacion esta correcta ",10,13,'$'
+    msgValidacionFilasCorrecta db "La validacion fila columna esta correcta ",10,13,'$'
 
     msgCuadrante1              db "Esta ubicado en el cuadrante 1 ",10,13,'$'
     msgCuadrante2              db "Esta ubicado en el cuadrante 2 ",10,13,'$'
@@ -122,6 +121,7 @@ datos segment
     enterMsg                   db " ",10,13,'$'
 
     msgDatoUsabelIa            db "El dato esta temporalmente permitido",10,13,'$'
+    msgExtendenTime            db "La inteligenica artificial no encontro movimientos en un rango previsto y se cerro",10,13,'$'
 
 datos endS
 
@@ -248,7 +248,6 @@ verificarTablero proc near                                                  ;Ver
 verificarTablero endp
 
 validacionZona proc near
-
                                  cmp    zona, 0
                                  je     zoneValidate1Datoss
 
@@ -363,7 +362,7 @@ validacionZona proc near
                                  cmp    al, '.'
                                  je     zoneTemp2Comp
     zoneTem1Comp:                                                           ;cmp    al, zonaTemp2
-    ;je     auxValorRepetidoZona
+
                                  add    al,32
                                  cmp    al, zonaTemp2
                                  je     auxValorRepetidoZona
@@ -372,8 +371,6 @@ validacionZona proc near
                                  je     auxValorRepetidoZona
                                  add    al ,32
 
-    ;cmp    al, zonaTemp3
-    ;je     auxValorRepetidoZona
                                  add    al,32
                                  cmp    al, zonaTemp3
                                  je     auxValorRepetidoZona
@@ -382,8 +379,6 @@ validacionZona proc near
                                  je     auxValorRepetidoZona
                                  add    al ,32
 
-    ;cmp    al, zonaTemp4
-    ;je     auxValorRepetidoZona
                                  add    al,32
                                  cmp    al, zonaTemp4
                                  je     auxValorRepetidoZona
@@ -397,8 +392,7 @@ validacionZona proc near
     zoneTemp2Comp:               mov    al, zonaTemp2
                                  cmp    al, '.'
                                  je     zone3Tem3Comp
-    ;cmp    al, zonaTemp3
-    ;je     valoresRepetidos
+
                                  add    al,32
                                  cmp    al, zonaTemp3
                                  je     valoresRepetidos
@@ -435,7 +429,10 @@ validacionZona proc near
                                  int    21h
                                  ret
 
-    valoresRepetidos:            mov    ah, 09h
+    valoresRepetidos:            cmp    banderaError,7
+                                 je     zonaIAError
+    
+                                 mov    ah, 09h
                                  lea    dx, msgZonaIncorrecta
                                  int    21h
                                  jmp    salirZone
@@ -446,6 +443,9 @@ validacionZona proc near
     
                                  mov    ax, 4C00h
                                  int    21h
+
+    zonaIAError:                 mov    banderaError,1
+                                 ret
 validacionZona endp
 
 validacionLinea proc near
@@ -537,7 +537,10 @@ validacionLinea proc near
                                  add    al ,32
                                  jmp    columnaValidate
 
-    valoresRepetidosColu:        mov    ah, 09h
+    valoresRepetidosColu:        cmp    banderaError,7
+                                 je     auxFilasIa
+    
+                                 mov    ah, 09h
                                  lea    dx, msgErrorFilasValidacion
                                  int    21h
                                  jmp    salirFilasColuVal
@@ -558,13 +561,15 @@ validacionLinea proc near
                                  mov    fila,3
                                  call   pruebaAccederDatos
                                  mov    zonaTemp4, al
+                                 jmp    comparacionFila
+
+    auxFilasIa:                  jmp    salirValidarLineaIa
 
     comparacionFila:             xor    ax,ax
                                  mov    al, zonaTemp1
                                  cmp    al, '.'
                                  je     fil2Val
-    fila1Val:                                                               ;cmp    al, zonaTemp2
-    ;je     auxColuRepetido
+    fila1Val:                    
                                  add    al,32
                                  cmp    al, zonaTemp2
                                  je     auxColuRepetido
@@ -572,8 +577,7 @@ validacionLinea proc near
                                  cmp    al, zonaTemp2
                                  je     auxColuRepetido
                                  add    al ,32
-    ;cmp    al, zonaTemp3
-    ; je     auxColuRepetido
+
                                  add    al,32
                                  cmp    al, zonaTemp3
                                  je     auxColuRepetido
@@ -581,8 +585,7 @@ validacionLinea proc near
                                  cmp    al, zonaTemp3
                                  je     auxColuRepetido
                                  add    al ,32
-    ;cmp    al, zonaTemp4
-    ;je     auxColuRepetido
+ 
                                  add    al,32
                                  cmp    al, zonaTemp4
                                  je     auxColuRepetido
@@ -597,8 +600,7 @@ validacionLinea proc near
     fil2Val:                     mov    al, zonaTemp2
                                  cmp    al, '.'
                                  je     fila3Val
-    ;cmp    al, zonaTemp3
-    ;je     valoresRepetidosFila
+
                                  add    al,32
                                  cmp    al, zonaTemp3
                                  je     valoresRepetidosFila
@@ -606,8 +608,7 @@ validacionLinea proc near
                                  cmp    al, zonaTemp3
                                  je     valoresRepetidosFila
                                  add    al ,32
-    ;cmp    al, zonaTemp4
-    ;je     valoresRepetidosFila
+
                                  add    al,32
                                  cmp    al, zonaTemp4
                                  je     valoresRepetidosFila
@@ -634,13 +635,19 @@ validacionLinea proc near
                                  int    21h
                                  ret
 
-    valoresRepetidosFila:        mov    ah, 09h
+    valoresRepetidosFila:        cmp    banderaError,1
+                                 je     salirValidarLineaIa
+                     
+                                 mov    ah, 09h
                                  lea    dx, msgErrorColumValidacion
                                  int    21h
                                  jmp    salirFilasColuVal
                            
     salirFilasColuVal:           mov    ax, 4C00h
                                  int    21h
+
+    salirValidarLineaIa:         mov    banderaError,1
+                                 ret
 validacionLinea endp
 
 definirCuadrante proc near                                                  ;Sirve
@@ -1360,28 +1367,60 @@ movimientoIA endp
 
 IaController proc near
                                  call   cargarTablero                       ;Se carga tablero con patida anterior
+                                 mov    cx,3000
 
-    loopMoviminetoIa:            mov    banderaError, 7
+    loopMoviminetoIa:            cmp    cx,0
+                                 je     finalPorTiempo
+                                 push   cx
+
+                                 mov    banderaError, 7
                                  call   movimientoIA
                                  call   validarTableroIa                    ;Valida datos correctos
 
                                  cmp    banderaError,1
-                                 je     loopMoviminetoIa
+                                 je     loopMoviminetoIaOtra
 
                                  call   insertarElementoTablero
                                  cmp    banderaError,1
-                                 je     loopMoviminetoIa
+                                 je     loopMoviminetoIaOtra
 
+                                 call   recargarVariables
+                                 call   validacionLinea
+                                 cmp    banderaError,1
+                                 je     loopMoviminetoIaOtra
+
+                                 call   recargarVariables
+                                 call   definirCuadrante
+
+                                 call   recargarVariables
+                                 call   validacionZona
+                                 cmp    banderaError,1
+                                 je     loopMoviminetoIaOtra
+
+                                 call   recargarVariables
+                                 call   verificarGanadorZona
+
+                                 call   recargarVariables
+                                 call   verificarGanadorColu
+
+                                 call   cerrarZonaCorrecta
+
+    loopMoviminetoIaOtra:        pop    cx
+                                 dec    cx
+                                 jmp    loopMoviminetoIa
 
                                  lea    dx, msgDatoUsabelIa
                                  mov    ah, 09h
                                  int    21h
-                                 call   cerrarZonaCorrecta
+                                
+
+    finalPorTiempo:              lea    dx, msgExtendenTime
+                                 mov    ah, 09h
+                                 int    21h
     
                                  ret
 
 IaController endp
-
 
 
 cerrarZonaCorrecta proc near
@@ -1467,10 +1506,7 @@ cerrarZonaCorrecta endp
                                  mov    ds, ax
                                  mov    ax, pila
                                  mov    ss, ax
-
-    ;call   movimientoIA
-
-    ;call   IaController
+                                 
                                  mov    si, 80h
                                  mov    cl, byte ptr es:[si]
                                  xor    ch, ch
