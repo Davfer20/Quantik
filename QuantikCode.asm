@@ -53,6 +53,7 @@ datos segment
 
     columnaEntrada             db ?
     filaEntrada                db ?
+    banderaError               db ?
     
     Semilla                    dw ?
 
@@ -116,8 +117,11 @@ datos segment
     msgNegrasGanan             db "Las negras ganaron el juego",10,13,'$'
     msgHuboEmpate              db "Hubo un empate",10,13,'$'
 
+    msgPiezaInsertada          db "Se inserto la pieza en la pocision: $"
 
     enterMsg                   db " ",10,13,'$'
+
+    msgDatoUsabelIa            db "El dato esta temporalmente permitido",10,13,'$'
 
 datos endS
 
@@ -127,1315 +131,1366 @@ pila endS
 
 
 codigo segment
-                                Assume CS:codigo,DS:datos,SS:pila
+                                 Assume CS:codigo,DS:datos,SS:pila
 
 enterCall proc near
-                                mov    ah, 09h
-                                lea    dx, enterMsg                         ;Hace un enter
-                                int    21h
-                                ret
+                                 mov    ah, 09h
+                                 lea    dx, enterMsg                        ;Hace un enter
+                                 int    21h
+                                 ret
 enterCall endP
 
 funcionAyuda proc near
                  
-    A:                          mov    ah, 09h
-                                lea    dx, defC
-                                int    21h
+    A:                           mov    ah, 09h
+                                 lea    dx, defC
+                                 int    21h
                          
-    C:                          mov    ah, 09h
-                                lea    dx, defJ
-                                int    21h
+    C:                           mov    ah, 09h
+                                 lea    dx, defJ
+                                 int    21h
                         
-    I:                          mov    ah, 09h
-                                lea    dx, defI
-                                int    21h
+    I:                           mov    ah, 09h
+                                 lea    dx, defI
+                                 int    21h
 
-                                ret
+                                 ret
 funcionAyuda endp
 
 indexOpciones proc near
 
-                                cmp    al, 'C'
-                                jne    o2
+                                 cmp    al, 'C'
+                                 jne    o2
                   
-                                call   verificarTablero
-                                ret
+                                 call   verificarTablero
+                                 ret
                         
-    o2:                         cmp    al, 'J'
-                                jne    o3
-                                call   addNuevaJugada
-                                ret
+    o2:                          cmp    al, 'J'
+                                 jne    o3
+                                 call   addNuevaJugada
+                                 ret
 
-    o3:                         cmp    al, 'I'
-                                jne    o4
-                                call   movimientoIA
-                                ret
+    o3:                          cmp    al, 'I'
+                                 jne    o4
+                                 call   IaController
+                                 ret
         
-    o4:                         mov    ah, 09h
-                                lea    dx, comandoError
-                                int    21h
+    o4:                          mov    ah, 09h
+                                 lea    dx, comandoError
+                                 int    21h
     
-                                mov    ax, 4C00h
-                                int    21h
+                                 mov    ax, 4C00h
+                                 int    21h
 indexOpciones endp
 
 buscaPosition proc near
-                                xor    ax,ax
-                                mov    al, fila
-                                mov    bl, 4
-                                mul    bx
-                                mov    dl, columna
-                                add    al,columna
+                                 xor    ax,ax
+                                 mov    al, fila
+                                 mov    bl, 4
+                                 mul    bx
+                                 mov    dl, columna
+                                 add    al,columna
 
-                                mov    di,ax
-                                ret
+                                 mov    di,ax
+                                 ret
 buscaPosition endp
 
 pruebaAccederDatos proc near
-                                call   buscaPosition
-                                mov    al, byte ptr tableroActual[di]
-                                mov    valor,al
-                                xor    di,di
-                                xor    bx,bx
-                                ret
+                                 call   buscaPosition
+                                 mov    al, byte ptr tableroActual[di]
+                                 mov    valor,al
+                                 xor    di,di
+                                 xor    bx,bx
+                                 ret
 pruebaAccederDatos endp
 
 verificarTablero proc near                                                  ;Verifica tablero y puede reinicair
-                                lea    dx,nombArchivo
-                                mov    ax,3D00h
-                                int    21h
-                                jnc    existenteError
+                                 lea    dx,nombArchivo
+                                 mov    ax,3D00h
+                                 int    21h
+                                 jnc    existenteError
 
-    crearPartida:               mov    ah,3Ch
-                                xor    cx,cx
-                                lea    dx, nombArchivo
-                                int    21h
-                                jc     errorSobreEcribir
-                                mov    handleS,ax
-                                jmp    escribirTableroNuevo
+    crearPartida:                mov    ah,3Ch
+                                 xor    cx,cx
+                                 lea    dx, nombArchivo
+                                 int    21h
+                                 jc     errorSobreEcribir
+                                 mov    handleS,ax
+                                 jmp    escribirTableroNuevo
    
-    existenteError:             mov    ah, 09h
-                                lea    dx, inputArchivo
-                                int    21h
+    existenteError:              mov    ah, 09h
+                                 lea    dx, inputArchivo
+                                 int    21h
                         
-                                mov    ah,01h
-                                int    21h
-                                cmp    al, 89
-                                je     crearPartida
-                                jmp    errorSobreEcribir
+                                 mov    ah,01h
+                                 int    21h
+                                 cmp    al, 89
+                                 je     crearPartida
+                                 jmp    errorSobreEcribir
    
-    escribirTableroNuevo:       mov    bx, handleS
-                                mov    ah, 40h
-                                mov    cx,19
-                                lea    dx,bufferTablero
-                                int    21h
+    escribirTableroNuevo:        mov    bx, handleS
+                                 mov    ah, 40h
+                                 mov    cx,19
+                                 lea    dx,bufferTablero
+                                 int    21h
 
-    cerrarTableroCreado:        mov    ah,3Eh
-                                mov    bx,handleS
-                                int    21h
-                                ret
+    cerrarTableroCreado:         mov    ah,3Eh
+                                 mov    bx,handleS
+                                 int    21h
+                                 ret
 
-    errorSobreEcribir:          lea    dx, msgNoSobrescribir
-                                mov    ah, 09h
-                                int    21h
+    errorSobreEcribir:           lea    dx, msgNoSobrescribir
+                                 mov    ah, 09h
+                                 int    21h
 
-                                mov    ax,4C00h
-                                int    21h
+                                 mov    ax,4C00h
+                                 int    21h
 verificarTablero endp
 
 validacionZona proc near
 
-                                cmp    zona, 0
-                                je     zoneValidate1Datoss
+                                 cmp    zona, 0
+                                 je     zoneValidate1Datoss
 
-                                cmp    zona,1
-                                je     zoneValidate2Datoss
+                                 cmp    zona,1
+                                 je     zoneValidate2Datoss
 
-                                cmp    zona,2
-                                je     auxZone3
+                                 cmp    zona,2
+                                 je     auxZone3
 
-                                cmp    zona,3
-                                je     auxZone4
-                                jmp    salirZone
+                                 cmp    zona,3
+                                 je     auxZone4
+                                 jmp    salirZone
 
 
-    zoneValidate1Datoss:        mov    fila,0                               ;Se busca el valor del 00
-                                mov    columna,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
+    zoneValidate1Datoss:         mov    fila,0                              ;Se busca el valor del 00
+                                 mov    columna,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
 
-                                mov    fila,0                               ;Se busca el valor del 01
-                                mov    columna,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
-
-                           
-                                mov    fila,1                               ;Se busca el valor del 10
-                                mov    columna,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
+                                 mov    fila,0                              ;Se busca el valor del 01
+                                 mov    columna,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
 
                            
-                                mov    fila,1                               ;Se busca el valor del 11
-                                mov    columna,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
-                                jmp    comparacionesZonas
-
-    auxZone3:                   jmp    zoneValidate3Datoss
-    auxZone4:                   jmp    zoneValidate4Datoss
-
-    zoneValidate2Datoss:        mov    fila,0                               ;Se busca el valor del 00
-                                mov    columna,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
-
-                                mov    fila,0                               ;Se busca el valor del 01
-                                mov    columna,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
+                                 mov    fila,1                              ;Se busca el valor del 10
+                                 mov    columna,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
 
                            
-                                mov    fila,1                               ;Se busca el valor del 10
-                                mov    columna,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
+                                 mov    fila,1                              ;Se busca el valor del 11
+                                 mov    columna,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
+                                 jmp    comparacionesZonas
+
+    auxZone3:                    jmp    zoneValidate3Datoss
+    auxZone4:                    jmp    zoneValidate4Datoss
+
+    zoneValidate2Datoss:         mov    fila,0                              ;Se busca el valor del 00
+                                 mov    columna,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
+
+                                 mov    fila,0                              ;Se busca el valor del 01
+                                 mov    columna,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
 
                            
-                                mov    fila,1                               ;Se busca el valor del 11
-                                mov    columna,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
-                                jmp    comparacionesZonas
-
-    zoneValidate3Datoss:        mov    fila,2                               ;Se busca el valor del 00
-                                mov    columna,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
-
-                                mov    fila,2                               ;Se busca el valor del 01
-                                mov    columna,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
+                                 mov    fila,1                              ;Se busca el valor del 10
+                                 mov    columna,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
 
                            
-                                mov    fila,3                               ;Se busca el valor del 10
-                                mov    columna,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
+                                 mov    fila,1                              ;Se busca el valor del 11
+                                 mov    columna,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
+                                 jmp    comparacionesZonas
+
+    zoneValidate3Datoss:         mov    fila,2                              ;Se busca el valor del 00
+                                 mov    columna,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
+
+                                 mov    fila,2                              ;Se busca el valor del 01
+                                 mov    columna,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
 
                            
-                                mov    fila,3                               ;Se busca el valor del 11
-                                mov    columna,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
-                                jmp    comparacionesZonas
-
-    zoneValidate4Datoss:        mov    fila,2                               ;Se busca el valor del 00
-                                mov    columna,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
-
-                                mov    fila,2                               ;Se busca el valor del 01
-                                mov    columna,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
+                                 mov    fila,3                              ;Se busca el valor del 10
+                                 mov    columna,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
 
                            
-                                mov    fila,3                               ;Se busca el valor del 10
-                                mov    columna,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
+                                 mov    fila,3                              ;Se busca el valor del 11
+                                 mov    columna,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
+                                 jmp    comparacionesZonas
+
+    zoneValidate4Datoss:         mov    fila,2                              ;Se busca el valor del 00
+                                 mov    columna,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
+
+                                 mov    fila,2                              ;Se busca el valor del 01
+                                 mov    columna,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
 
                            
-                                mov    fila,3                               ;Se busca el valor del 11
-                                mov    columna,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
-                                jmp    comparacionesZonas
+                                 mov    fila,3                              ;Se busca el valor del 10
+                                 mov    columna,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
 
-    comparacionesZonas:         xor    ax,ax
-                                mov    al, zonaTemp1
-                                cmp    al, '.'
-                                je     zoneTemp2Comp
+                           
+                                 mov    fila,3                              ;Se busca el valor del 11
+                                 mov    columna,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
+                                 jmp    comparacionesZonas
+
+    comparacionesZonas:          xor    ax,ax
+                                 mov    al, zonaTemp1
+                                 cmp    al, '.'
+                                 je     zoneTemp2Comp
     zoneTem1Comp:                                                           ;cmp    al, zonaTemp2
     ;je     auxValorRepetidoZona
-                                add    al,32
-                                cmp    al, zonaTemp2
-                                je     auxValorRepetidoZona
-                                sub    al,64
-                                cmp    al, zonaTemp2
-                                je     auxValorRepetidoZona
-                                add    al ,32
+                                 add    al,32
+                                 cmp    al, zonaTemp2
+                                 je     auxValorRepetidoZona
+                                 sub    al,64
+                                 cmp    al, zonaTemp2
+                                 je     auxValorRepetidoZona
+                                 add    al ,32
 
     ;cmp    al, zonaTemp3
     ;je     auxValorRepetidoZona
-                                add    al,32
-                                cmp    al, zonaTemp3
-                                je     auxValorRepetidoZona
-                                sub    al,64
-                                cmp    al, zonaTemp3
-                                je     auxValorRepetidoZona
-                                add    al ,32
+                                 add    al,32
+                                 cmp    al, zonaTemp3
+                                 je     auxValorRepetidoZona
+                                 sub    al,64
+                                 cmp    al, zonaTemp3
+                                 je     auxValorRepetidoZona
+                                 add    al ,32
 
     ;cmp    al, zonaTemp4
     ;je     auxValorRepetidoZona
-                                add    al,32
-                                cmp    al, zonaTemp4
-                                je     auxValorRepetidoZona
-                                sub    al,64
-                                cmp    al, zonaTemp4
-                                je     auxValorRepetidoZona
-                                jmp    zoneTemp2Comp
+                                 add    al,32
+                                 cmp    al, zonaTemp4
+                                 je     auxValorRepetidoZona
+                                 sub    al,64
+                                 cmp    al, zonaTemp4
+                                 je     auxValorRepetidoZona
+                                 jmp    zoneTemp2Comp
 
-    auxValorRepetidoZona:       jmp    valoresRepetidos
+    auxValorRepetidoZona:        jmp    valoresRepetidos
 
-    zoneTemp2Comp:              mov    al, zonaTemp2
-                                cmp    al, '.'
-                                je     zone3Tem3Comp
+    zoneTemp2Comp:               mov    al, zonaTemp2
+                                 cmp    al, '.'
+                                 je     zone3Tem3Comp
     ;cmp    al, zonaTemp3
     ;je     valoresRepetidos
-                                add    al,32
-                                cmp    al, zonaTemp3
-                                je     valoresRepetidos
-                                sub    al,64
-                                cmp    al, zonaTemp3
-                                je     valoresRepetidos
-                                add    al ,32
+                                 add    al,32
+                                 cmp    al, zonaTemp3
+                                 je     valoresRepetidos
+                                 sub    al,64
+                                 cmp    al, zonaTemp3
+                                 je     valoresRepetidos
+                                 add    al ,32
 
     ;cmp    al, zonaTemp4
     ;je     valoresRepetidos
-                                add    al,32
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidos
-                                sub    al,64
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidos
-                                add    al ,32
+                                 add    al,32
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidos
+                                 sub    al,64
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidos
+                                 add    al ,32
 
-    zone3Tem3Comp:              mov    al, zonaTemp3
-                                cmp    al, '.'
-                                je     zonaCorrecta
+    zone3Tem3Comp:               mov    al, zonaTemp3
+                                 cmp    al, '.'
+                                 je     zonaCorrecta
     ;cmp    al, zonaTemp4
     ;je     valoresRepetidos
-                                add    al,32
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidos
-                                sub    al,64
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidos
-                                jmp    zonaCorrecta
+                                 add    al,32
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidos
+                                 sub    al,64
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidos
+                                 jmp    zonaCorrecta
 
-    zonaCorrecta:               mov    ah, 09h
-                                lea    dx, msgZonCorrecta
-                                int    21h
-                                ret
+    zonaCorrecta:                mov    ah, 09h
+                                 lea    dx, msgZonCorrecta
+                                 int    21h
+                                 ret
 
-    valoresRepetidos:           mov    ah, 09h
-                                lea    dx, msgZonaIncorrecta
-                                int    21h
-                                jmp    salirZone
+    valoresRepetidos:            mov    ah, 09h
+                                 lea    dx, msgZonaIncorrecta
+                                 int    21h
+                                 jmp    salirZone
 
-    salirzone:                  mov    ah, 09h
-                                lea    dx, msgZonaIncorrecta
-                                int    21h
+    salirzone:                   mov    ah, 09h
+                                 lea    dx, msgZonaIncorrecta
+                                 int    21h
     
-                                mov    ax, 4C00h
-                                int    21h
+                                 mov    ax, 4C00h
+                                 int    21h
 validacionZona endp
 
 validacionLinea proc near
     ;vamos a suponer que el usario pone fila y columnas
-                                mov    al,columna
-                                mov    columnaAux, al
+                                 mov    al,columna
+                                 mov    columnaAux, al
 
-    filaValidate:               xor    ax,ax
-                                mov    columna,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
-                                mov    columna,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
-                                mov    columna,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
-                                mov    columna,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
+    filaValidate:                xor    ax,ax
+                                 mov    columna,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
+                                 mov    columna,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
+                                 mov    columna,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
+                                 mov    columna,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
 
-    comparacionColumna:         xor    ax,ax
-                                mov    al, zonaTemp1
-                                cmp    al, '.'
-                                je     columna2Val
+    comparacionColumna:          xor    ax,ax
+                                 mov    al, zonaTemp1
+                                 cmp    al, '.'
+                                 je     columna2Val
     columna1Val:                                                            ;cmp    al, zonaTemp2
     ;je     auxValorRepetido
-                                add    al,32
-                                cmp    al, zonaTemp2
-                                je     auxValorRepetido
-                                sub    al,64
-                                cmp    al, zonaTemp2
-                                je     auxValorRepetido
-                                add    al ,32
+                                 add    al,32
+                                 cmp    al, zonaTemp2
+                                 je     auxValorRepetido
+                                 sub    al,64
+                                 cmp    al, zonaTemp2
+                                 je     auxValorRepetido
+                                 add    al ,32
     ;cmp    al, zonaTemp3
     ;je     auxValorRepetido
-                                add    al,32
-                                cmp    al, zonaTemp3
-                                je     auxValorRepetido
-                                sub    al,64
-                                cmp    al, zonaTemp3
-                                je     auxValorRepetido
-                                add    al ,32
+                                 add    al,32
+                                 cmp    al, zonaTemp3
+                                 je     auxValorRepetido
+                                 sub    al,64
+                                 cmp    al, zonaTemp3
+                                 je     auxValorRepetido
+                                 add    al ,32
     ;cmp    al, zonaTemp4
     ;je     auxValorRepetido
-                                add    al,32
-                                cmp    al, zonaTemp4
-                                je     auxValorRepetido
-                                sub    al,64
-                                cmp    al, zonaTemp4
-                                je     auxValorRepetido
-                                add    al ,32
-                                jmp    columna2Val
+                                 add    al,32
+                                 cmp    al, zonaTemp4
+                                 je     auxValorRepetido
+                                 sub    al,64
+                                 cmp    al, zonaTemp4
+                                 je     auxValorRepetido
+                                 add    al ,32
+                                 jmp    columna2Val
 
-    auxValorRepetido:           jmp    valoresRepetidosColu
+    auxValorRepetido:            jmp    valoresRepetidosColu
                                 
-    columna2Val:                mov    al, zonaTemp2
-                                cmp    al, '.'
-                                je     columna3Val
+    columna2Val:                 mov    al, zonaTemp2
+                                 cmp    al, '.'
+                                 je     columna3Val
     ;cmp    al, zonaTemp3
     ;je     valoresRepetidosColu
-                                add    al,32
-                                cmp    al, zonaTemp3
-                                je     valoresRepetidosColu
-                                sub    al,64
-                                cmp    al, zonaTemp3
-                                je     valoresRepetidosColu
-                                add    al ,32
+                                 add    al,32
+                                 cmp    al, zonaTemp3
+                                 je     valoresRepetidosColu
+                                 sub    al,64
+                                 cmp    al, zonaTemp3
+                                 je     valoresRepetidosColu
+                                 add    al ,32
     ;cmp    al, zonaTemp4
     ;je     valoresRepetidosColu
-                                add    al,32
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidosColu
-                                sub    al,64
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidosColu
-                                add    al ,32
-    columna3Val:                mov    al, zonaTemp3
-                                cmp    al, '.'
-                                je     columnaValidate
+                                 add    al,32
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidosColu
+                                 sub    al,64
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidosColu
+                                 add    al ,32
+    columna3Val:                 mov    al, zonaTemp3
+                                 cmp    al, '.'
+                                 je     columnaValidate
     ;cmp    al, zonaTemp4
     ;je     valoresRepetidosColu
-                                add    al,32
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidosColu
-                                sub    al,64
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidosColu
-                                add    al ,32
-                                jmp    columnaValidate
+                                 add    al,32
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidosColu
+                                 sub    al,64
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidosColu
+                                 add    al ,32
+                                 jmp    columnaValidate
 
-    valoresRepetidosColu:       mov    ah, 09h
-                                lea    dx, msgErrorFilasValidacion
-                                int    21h
-                                jmp    salirFilasColuVal
+    valoresRepetidosColu:        mov    ah, 09h
+                                 lea    dx, msgErrorFilasValidacion
+                                 int    21h
+                                 jmp    salirFilasColuVal
     ;TERMINA EL DE FILASSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
 
 
-    columnaValidate:            mov    al,columnaAux
-                                mov    columna, al
-                                mov    fila,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
-                                mov    fila,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
-                                mov    fila,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
-                                mov    fila,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
+    columnaValidate:             mov    al,columnaAux
+                                 mov    columna, al
+                                 mov    fila,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
+                                 mov    fila,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
+                                 mov    fila,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
+                                 mov    fila,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
 
-    comparacionFila:            xor    ax,ax
-                                mov    al, zonaTemp1
-                                cmp    al, '.'
-                                je     fil2Val
+    comparacionFila:             xor    ax,ax
+                                 mov    al, zonaTemp1
+                                 cmp    al, '.'
+                                 je     fil2Val
     fila1Val:                                                               ;cmp    al, zonaTemp2
     ;je     auxColuRepetido
-                                add    al,32
-                                cmp    al, zonaTemp2
-                                je     auxColuRepetido
-                                sub    al,64
-                                cmp    al, zonaTemp2
-                                je     auxColuRepetido
-                                add    al ,32
+                                 add    al,32
+                                 cmp    al, zonaTemp2
+                                 je     auxColuRepetido
+                                 sub    al,64
+                                 cmp    al, zonaTemp2
+                                 je     auxColuRepetido
+                                 add    al ,32
     ;cmp    al, zonaTemp3
     ; je     auxColuRepetido
-                                add    al,32
-                                cmp    al, zonaTemp3
-                                je     auxColuRepetido
-                                sub    al,64
-                                cmp    al, zonaTemp3
-                                je     auxColuRepetido
-                                add    al ,32
+                                 add    al,32
+                                 cmp    al, zonaTemp3
+                                 je     auxColuRepetido
+                                 sub    al,64
+                                 cmp    al, zonaTemp3
+                                 je     auxColuRepetido
+                                 add    al ,32
     ;cmp    al, zonaTemp4
     ;je     auxColuRepetido
-                                add    al,32
-                                cmp    al, zonaTemp4
-                                je     auxColuRepetido
-                                sub    al,64
-                                cmp    al, zonaTemp4
-                                je     auxColuRepetido
-                                add    al ,32
-                                jmp    fil2Val
+                                 add    al,32
+                                 cmp    al, zonaTemp4
+                                 je     auxColuRepetido
+                                 sub    al,64
+                                 cmp    al, zonaTemp4
+                                 je     auxColuRepetido
+                                 add    al ,32
+                                 jmp    fil2Val
 
-    auxColuRepetido:            jmp    valoresRepetidosFila
+    auxColuRepetido:             jmp    valoresRepetidosFila
                                 
-    fil2Val:                    mov    al, zonaTemp2
-                                cmp    al, '.'
-                                je     fila3Val
+    fil2Val:                     mov    al, zonaTemp2
+                                 cmp    al, '.'
+                                 je     fila3Val
     ;cmp    al, zonaTemp3
     ;je     valoresRepetidosFila
-                                add    al,32
-                                cmp    al, zonaTemp3
-                                je     valoresRepetidosFila
-                                sub    al,64
-                                cmp    al, zonaTemp3
-                                je     valoresRepetidosFila
-                                add    al ,32
+                                 add    al,32
+                                 cmp    al, zonaTemp3
+                                 je     valoresRepetidosFila
+                                 sub    al,64
+                                 cmp    al, zonaTemp3
+                                 je     valoresRepetidosFila
+                                 add    al ,32
     ;cmp    al, zonaTemp4
     ;je     valoresRepetidosFila
-                                add    al,32
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidosFila
-                                sub    al,64
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidosFila
-                                add    al ,32
-    fila3Val:                   mov    al, zonaTemp3
-                                cmp    al, '.'
-                                je     pocicionCorrecta
+                                 add    al,32
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidosFila
+                                 sub    al,64
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidosFila
+                                 add    al ,32
+    fila3Val:                    mov    al, zonaTemp3
+                                 cmp    al, '.'
+                                 je     pocicionCorrecta
     ;cmp    al, zonaTemp4
     ;je     valoresRepetidosFila
-                                add    al,32
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidosFila
-                                sub    al,64
-                                cmp    al, zonaTemp4
-                                je     valoresRepetidosFila
-                                add    al ,32
-                                jmp    pocicionCorrecta
+                                 add    al,32
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidosFila
+                                 sub    al,64
+                                 cmp    al, zonaTemp4
+                                 je     valoresRepetidosFila
+                                 add    al ,32
+                                 jmp    pocicionCorrecta
 
-    pocicionCorrecta:           mov    ah, 09h
-                                lea    dx, msgValidacionFilasCorrecta
-                                int    21h
-                                ret
+    pocicionCorrecta:            mov    ah, 09h
+                                 lea    dx, msgValidacionFilasCorrecta
+                                 int    21h
+                                 ret
 
-    valoresRepetidosFila:       mov    ah, 09h
-                                lea    dx, msgErrorColumValidacion
-                                int    21h
-                                jmp    salirFilasColuVal
+    valoresRepetidosFila:        mov    ah, 09h
+                                 lea    dx, msgErrorColumValidacion
+                                 int    21h
+                                 jmp    salirFilasColuVal
                            
-    salirFilasColuVal:          mov    ax, 4C00h
-                                int    21h
+    salirFilasColuVal:           mov    ax, 4C00h
+                                 int    21h
 validacionLinea endp
 
 definirCuadrante proc near                                                  ;Sirve
-                                mov    al, fila
-                                cmp    al, 0
-                                je     posibleZone1
-                                cmp    al, 1
-                                je     posibleZone1
-                                cmp    al, 2
-                                je     posibleZone3
-                                cmp    al, 3
-                                je     posibleZone3
+                                 mov    al, fila
+                                 cmp    al, 0
+                                 je     posibleZone1
+                                 cmp    al, 1
+                                 je     posibleZone1
+                                 cmp    al, 2
+                                 je     posibleZone3
+                                 cmp    al, 3
+                                 je     posibleZone3
 
 
-    posibleZone1:               xor    al, al
-                                mov    al, columna
-                                cmp    al, 0
-                                je     cuadrante1
-                                cmp    al, 1
-                                je     cuadrante1
-                                jmp    cuadrante2
+    posibleZone1:                xor    al, al
+                                 mov    al, columna
+                                 cmp    al, 0
+                                 je     cuadrante1
+                                 cmp    al, 1
+                                 je     cuadrante1
+                                 jmp    cuadrante2
 
-    posibleZone3:               xor    al, al
-                                mov    al, columna
-                                cmp    al, 0
-                                je     cuadrante3
-                                cmp    al, 1
-                                je     cuadrante3
-                                jmp    cuadrante4
+    posibleZone3:                xor    al, al
+                                 mov    al, columna
+                                 cmp    al, 0
+                                 je     cuadrante3
+                                 cmp    al, 1
+                                 je     cuadrante3
+                                 jmp    cuadrante4
 
 
-    cuadrante1:                 mov    zona, 0
-                                jmp    salirCuadrante
+    cuadrante1:                  mov    zona, 0
+                                 jmp    salirCuadrante
 
-    cuadrante2:                 mov    zona,1
-                                jmp    salirCuadrante
+    cuadrante2:                  mov    zona,1
+                                 jmp    salirCuadrante
 
-    cuadrante3:                 mov    zona,2
-                                jmp    salirCuadrante
+    cuadrante3:                  mov    zona,2
+                                 jmp    salirCuadrante
 
-    cuadrante4:                 mov    zona,3
+    cuadrante4:                  mov    zona,3
 
-    salirCuadrante:             ret
+    salirCuadrante:              ret
 
 definirCuadrante endp
 
 recargarVariables proc near
-                                mov    al, columnaEntrada
-                                mov    columna, al
+                                 mov    al, columnaEntrada
+                                 mov    columna, al
 
-                                mov    al, filaEntrada
-                                mov    fila,al
-                                ret
+                                 mov    al, filaEntrada
+                                 mov    fila,al
+                                 ret
 recargarVariables endp
 
 verificarGanadorZona proc near
-                                cmp    zona, 0
-                                je     zonaGanador1
+                                 cmp    zona, 0
+                                 je     zonaGanador1
 
-                                cmp    zona,1
-                                je     zonaGanador2
+                                 cmp    zona,1
+                                 je     zonaGanador2
 
-                                cmp    zona,2
-                                je     auxGanador3
+                                 cmp    zona,2
+                                 je     auxGanador3
 
-                                cmp    zona,3
-                                je     auxGanador4
-                                jmp    salirZone
+                                 cmp    zona,3
+                                 je     auxGanador4
+                                 jmp    salirZone
 
-    zonaGanador1:               mov    fila,0                               ;Se busca el valor del 00
-                                mov    columna,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
+    zonaGanador1:                mov    fila,0                              ;Se busca el valor del 00
+                                 mov    columna,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
 
-                                mov    fila,0                               ;Se busca el valor del 01
-                                mov    columna,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
-
-                           
-                                mov    fila,1                               ;Se busca el valor del 10
-                                mov    columna,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
+                                 mov    fila,0                              ;Se busca el valor del 01
+                                 mov    columna,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
 
                            
-                                mov    fila,1                               ;Se busca el valor del 11
-                                mov    columna,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
-                                jmp    busquedaGanador
-
-    auxGanador3:                jmp    zonaGanador3
-    auxGanador4:                jmp    zonaGanador4
-
-    zonaGanador2:               mov    fila,0                               ;Se busca el valor del 00
-                                mov    columna,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
-
-                                mov    fila,0                               ;Se busca el valor del 01
-                                mov    columna,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
+                                 mov    fila,1                              ;Se busca el valor del 10
+                                 mov    columna,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
 
                            
-                                mov    fila,1                               ;Se busca el valor del 10
-                                mov    columna,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
+                                 mov    fila,1                              ;Se busca el valor del 11
+                                 mov    columna,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
+                                 jmp    busquedaGanador
+
+    auxGanador3:                 jmp    zonaGanador3
+    auxGanador4:                 jmp    zonaGanador4
+
+    zonaGanador2:                mov    fila,0                              ;Se busca el valor del 00
+                                 mov    columna,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
+
+                                 mov    fila,0                              ;Se busca el valor del 01
+                                 mov    columna,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
 
                            
-                                mov    fila,1                               ;Se busca el valor del 11
-                                mov    columna,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
-                                jmp    busquedaGanador
-
-    zonaGanador3:               mov    fila,2                               ;Se busca el valor del 00
-                                mov    columna,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
-
-                                mov    fila,2                               ;Se busca el valor del 01
-                                mov    columna,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
+                                 mov    fila,1                              ;Se busca el valor del 10
+                                 mov    columna,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
 
                            
-                                mov    fila,3                               ;Se busca el valor del 10
-                                mov    columna,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
+                                 mov    fila,1                              ;Se busca el valor del 11
+                                 mov    columna,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
+                                 jmp    busquedaGanador
+
+    zonaGanador3:                mov    fila,2                              ;Se busca el valor del 00
+                                 mov    columna,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
+
+                                 mov    fila,2                              ;Se busca el valor del 01
+                                 mov    columna,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
 
                            
-                                mov    fila,3                               ;Se busca el valor del 11
-                                mov    columna,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
-                                jmp    busquedaGanador
-
-    zonaGanador4:               mov    fila,2                               ;Se busca el valor del 00
-                                mov    columna,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
-
-                                mov    fila,2                               ;Se busca el valor del 01
-                                mov    columna,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
+                                 mov    fila,3                              ;Se busca el valor del 10
+                                 mov    columna,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
 
                            
-                                mov    fila,3                               ;Se busca el valor del 10
-                                mov    columna,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
+                                 mov    fila,3                              ;Se busca el valor del 11
+                                 mov    columna,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
+                                 jmp    busquedaGanador
+
+    zonaGanador4:                mov    fila,2                              ;Se busca el valor del 00
+                                 mov    columna,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
+
+                                 mov    fila,2                              ;Se busca el valor del 01
+                                 mov    columna,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
 
                            
-                                mov    fila,3                               ;Se busca el valor del 11
-                                mov    columna,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
+                                 mov    fila,3                              ;Se busca el valor del 10
+                                 mov    columna,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
 
-    busquedaGanador:            xor    ax,ax
-                                mov    ax,1
-                                mul    zonaTemp1
-                                mov    dx,ax
+                           
+                                 mov    fila,3                              ;Se busca el valor del 11
+                                 mov    columna,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
 
-                                mov    ax,1
-                                mul    zonaTemp2
-                                mov    bx,ax
+    busquedaGanador:             xor    ax,ax
+                                 mov    ax,1
+                                 mul    zonaTemp1
+                                 mov    dx,ax
 
-                                add    bx, dx
+                                 mov    ax,1
+                                 mul    zonaTemp2
+                                 mov    bx,ax
 
-                                mov    ax,1
-                                mul    zonaTemp3
-                                mov    dx,ax
+                                 add    bx, dx
 
-                                add    bx,dx
+                                 mov    ax,1
+                                 mul    zonaTemp3
+                                 mov    dx,ax
 
-                                mov    ax,1
-                                mul    zonaTemp4
-                                mov    dx,ax
+                                 add    bx,dx
 
-                                add    bx, dx
+                                 mov    ax,1
+                                 mul    zonaTemp4
+                                 mov    dx,ax
+
+                                 add    bx, dx
                                 
-                                cmp    bx, 290
-                                je     ganadorBlancas
-                                cmp    bx, 418
-                                je     ganadorNegras
-                                ret
+                                 cmp    bx, 290
+                                 je     ganadorBlancas
+                                 cmp    bx, 418
+                                 je     ganadorNegras
+                                 ret
 
-    ganadorBlancas:             lea    dx, msgBlancasGanan
-                                mov    ah, 09h
-                                int    21h
-                                jmp    salirVictoria
+    ganadorBlancas:              lea    dx, msgBlancasGanan
+                                 mov    ah, 09h
+                                 int    21h
+                                 jmp    salirVictoria
     
-    ganadorNegras:              lea    dx, msgNegrasGanan
-                                mov    ah, 09h
-                                int    21h
+    ganadorNegras:               lea    dx, msgNegrasGanan
+                                 mov    ah, 09h
+                                 int    21h
 
-    salirVictoria:              mov    ax, 4C00h
-                                int    21h
+    salirVictoria:               mov    ax, 4C00h
+                                 int    21h
 
 verificarGanadorZona endp
 
 verificarGanadorColu proc near
-                                mov    al,columna
-                                mov    columnaAux, al
-                                xor    di,di
-                                xor    bx,bx
+                                 mov    al,columna
+                                 mov    columnaAux, al
+                                 xor    di,di
+                                 xor    bx,bx
 
-    buscarFilaGanar:            mov    columna,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
-                                mov    columna,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
-                                mov    columna,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
-                                mov    columna,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
+    buscarFilaGanar:             mov    columna,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
+                                 mov    columna,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
+                                 mov    columna,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
+                                 mov    columna,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
 
 
-    busquedaGanadorColu:        xor    ax,ax
-                                mov    ax,1
-                                mul    zonaTemp1
-                                mov    dx,ax
+    busquedaGanadorColu:         xor    ax,ax
+                                 mov    ax,1
+                                 mul    zonaTemp1
+                                 mov    dx,ax
 
-                                mov    ax,1
-                                mul    zonaTemp2
-                                mov    bx,ax
+                                 mov    ax,1
+                                 mul    zonaTemp2
+                                 mov    bx,ax
 
-                                add    bx, dx
+                                 add    bx, dx
 
-                                mov    ax,1
-                                mul    zonaTemp3
-                                mov    dx,ax
+                                 mov    ax,1
+                                 mul    zonaTemp3
+                                 mov    dx,ax
 
-                                add    bx,dx
+                                 add    bx,dx
 
-                                mov    ax,1
-                                mul    zonaTemp4
-                                mov    dx,ax
+                                 mov    ax,1
+                                 mul    zonaTemp4
+                                 mov    dx,ax
 
-                                add    bx, dx
+                                 add    bx, dx
                                 
-                                cmp    bx, 290
-                                je     ganadorBlancasMat
-                                cmp    bx, 418
-                                je     ganadorNegrasMat
-                                jmp    segirColumnas
+                                 cmp    bx, 290
+                                 je     ganadorBlancasMat
+                                 cmp    bx, 418
+                                 je     ganadorNegrasMat
+                                 jmp    segirColumnas
 
 
-    segirColumnas:              mov    al,columnaAux
-                                xor    di,di
-                                xor    bx,bx
+    segirColumnas:               mov    al,columnaAux
+                                 xor    di,di
+                                 xor    bx,bx
+
+                                 mov    columna, al
+                                 mov    fila,0
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp1, al
+                                 mov    fila,1
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp2, al
+                                 mov    fila,2
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp3, al
+                                 mov    fila,3
+                                 call   pruebaAccederDatos
+                                 mov    zonaTemp4, al
+
+    busquedaGanadorFila:         xor    ax,ax
+                                 mov    ax,1
+                                 mul    zonaTemp1
+                                 mov    dx,ax
+
+                                 mov    ax,1
+                                 mul    zonaTemp2
+                                 mov    bx,ax
+
+                                 add    bx, dx
+
+                                 mov    ax,1
+                                 mul    zonaTemp3
+                                 mov    dx,ax
+
+                                 add    bx,dx
+
+                                 mov    ax,1
+                                 mul    zonaTemp4
+                                 mov    dx,ax
+
+                                 add    bx, dx
                                 
-                                mov    columna, al
-                                mov    fila,0
-                                call   pruebaAccederDatos
-                                mov    zonaTemp1, al
-                                mov    fila,1
-                                call   pruebaAccederDatos
-                                mov    zonaTemp2, al
-                                mov    fila,2
-                                call   pruebaAccederDatos
-                                mov    zonaTemp3, al
-                                mov    fila,3
-                                call   pruebaAccederDatos
-                                mov    zonaTemp4, al
+                                 cmp    bx, 290
+                                 je     ganadorBlancasMat
+                                 cmp    bx, 418
+                                 je     ganadorNegrasMat
+                                 ret
 
-    busquedaGanadorFila:        xor    ax,ax
-                                mov    ax,1
-                                mul    zonaTemp1
-                                mov    dx,ax
-
-                                mov    ax,1
-                                mul    zonaTemp2
-                                mov    bx,ax
-
-                                add    bx, dx
-
-                                mov    ax,1
-                                mul    zonaTemp3
-                                mov    dx,ax
-
-                                add    bx,dx
-
-                                mov    ax,1
-                                mul    zonaTemp4
-                                mov    dx,ax
-
-                                add    bx, dx
-                                
-                                cmp    bx, 290
-                                je     ganadorBlancasMat
-                                cmp    bx, 418
-                                je     ganadorNegrasMat
-                                ret
-
-    ganadorBlancasMat:          lea    dx, msgBlancasGanan
-                                mov    ah, 09h
-                                int    21h
-                                jmp    salirVictoriaMat
+    ganadorBlancasMat:           lea    dx, msgBlancasGanan
+                                 mov    ah, 09h
+                                 int    21h
+                                 jmp    salirVictoriaMat
     
-    ganadorNegrasMat:           lea    dx, msgNegrasGanan
-                                mov    ah, 09h
-                                int    21h
+    ganadorNegrasMat:            lea    dx, msgNegrasGanan
+                                 mov    ah, 09h
+                                 int    21h
 
-    salirVictoriaMat:           mov    ax, 4C00h
-                                int    21h
+    salirVictoriaMat:            mov    ax, 4C00h
+                                 int    21h
 verificarGanadorColu endp
 
 lectorPiezas proc near                                                      ;Valida Jugador que juega
-                                mov    indiceFila, 0
-                                xor    cx,cx
-                                jmp    loopColumna
+                                 mov    jugadorActual,0
+                                 mov    indiceFila, 0
+                                 xor    cx,cx
+                                 jmp    loopColumna
                         
-    restartColumna:             mov    cx,0
-                                inc    indiceFila
-                                cmp    indiceFila, 4
-                                je     salirLectorPiezas
+    restartColumna:              mov    cx,0
+                                 inc    indiceFila
+                                 cmp    indiceFila, 4
+                                 je     salirLectorPiezas
 
-    loopColumna:                mov    al, indiceFila
-                                mov    fila, al
-                                xor    al, al
-                                mov    columna,cl
+    loopColumna:                 mov    al, indiceFila
+                                 mov    fila, al
+                                 xor    al, al
+                                 mov    columna,cl
 
-                                call   pruebaAccederDatos
-                                cmp    al, '.'
-                                je     backLoopColu
+                                 call   pruebaAccederDatos
+                                 cmp    al, '.'
+                                 je     backLoopColu
 
-    increaseVariable:           inc    jugadorActual
+    increaseVariable:            inc    jugadorActual
 
-    backLoopColu:               inc    cx
-                                cmp    cx, 4
-                                je     restartColumna
-                                jmp    loopColumna
+    backLoopColu:                inc    cx
+                                 cmp    cx, 4
+                                 je     restartColumna
+                                 jmp    loopColumna
 
-    salirLectorPiezas:          cmp    jugadorActual, 15
-                                je     empate
-                                ret
+    salirLectorPiezas:           cmp    jugadorActual, 15
+                                 je     empate
+                                 ret
 
-    empate:                     lea    dx, msgHuboEmpate
-                                mov    ah, 09h
-                                int    21h
+    empate:                      lea    dx, msgHuboEmpate
+                                 mov    ah, 09h
+                                 int    21h
 
-                                mov    ax, 4C00h
-                                int    21h
+                                 mov    ax, 4C00h
+                                 int    21h
 lectorPiezas endp
 
 cargarTablero proc near
 
-    converterMatriz:            xor    di,di
-                                mov    ah, 3Dh
-                                xor    al, al
-                                lea    dx, nombArchivo
-                                int    21h
-                                jnc    followInsert
-                                jmp    error
+    converterMatriz:             xor    di,di
+                                 mov    ah, 3Dh
+                                 xor    al, al
+                                 lea    dx, nombArchivo
+                                 int    21h
+                                 jnc    followInsert
+                                 jmp    error
 
-    followInsert:               mov    handleS, ax
-                                mov    cx,1
-                                mov    bx, handleS
+    followInsert:                mov    handleS, ax
+                                 mov    cx,1
+                                 mov    bx, handleS
 
-    readFileInsertar:           mov    ah, 3Fh
-                                lea    dx, Buffy
-                                mov    bx, handleS
-                                int    21h
-                                jc     error
-                                jmp    writeTxt
+    readFileInsertar:            mov    ah, 3Fh
+                                 lea    dx, Buffy
+                                 mov    bx, handleS
+                                 int    21h
+                                 jc     error
+                                 jmp    writeTxt
                                 
-    writeTxt:                   cmp    ax,0
-                                je     finalInsert
-                                mov    al, Buffy
-                                cmp    al, 10
-                                je     readFileInsertar
-                                mov    byte ptr tableroActual[di], al
-                                mov    byte ptr tableroTemporal[di], al
-                                inc    di
-                                jmp    readFileInsertar
+    writeTxt:                    cmp    ax,0
+                                 je     finalInsert
+                                 mov    al, Buffy
+                                 cmp    al, 10
+                                 je     readFileInsertar
+                                 mov    byte ptr tableroActual[di], al
+                                 mov    byte ptr tableroTemporal[di], al
+                                 inc    di
+                                 jmp    readFileInsertar
 
-    error:                      lea    dx, msgNoSobrescribir
-                                mov    ah, 09h
-                                int    21h
+    error:                       lea    dx, msgNoSobrescribir
+                                 mov    ah, 09h
+                                 int    21h
 
-    finalInsert:                mov    ah,3Eh
-                                mov    bx,handleS
-                                int    21h
-                                ret
+    finalInsert:                 mov    ah,3Eh
+                                 mov    bx,handleS
+                                 int    21h
+                                 ret
 cargarTablero endp
 
 actualizarTablero proc near
-                                call   lectorPiezas
-                                mov    cl,jugadorActual
+                                 call   lectorPiezas
+                                 mov    cl,jugadorActual
 
-                                mov    si, 80h
-                                inc    si
-                                inc    si
-                                inc    si
-                                inc    si
+                                 mov    si, 80h
+                                 inc    si
+                                 inc    si
+                                 inc    si
+                                 inc    si
                                 
-                                xor    di,di
-                                mov    al, byte ptr es:[si]
-                                cmp    al, 'B'
-                                je     comparacionBlanas
-                                cmp    al, 'N'
-                                je     comparacionNegras
-                                jmp    letraJugadorNoValida
+                                 xor    di,di
+                                 mov    al, byte ptr es:[si]
+                                 cmp    al, 'B'
+                                 je     comparacionBlanas
+                                 cmp    al, 'N'
+                                 je     comparacionNegras
+                                 jmp    letraJugadorNoValida
 
-    comparacionBlanas:          shr    cl,1
-                                jc     jugadorRepetido
+    comparacionBlanas:           shr    cl,1
+                                 jc     jugadorRepetido
     ;Aca se valida las letras
-                                mov    byte ptr turnoJugador[di], al
-                                inc    si
-                                inc    si
+                                 mov    byte ptr turnoJugador[di], al
+                                 inc    si
+                                 inc    si
 
-                                xor    di,di
-                                mov    al, byte ptr es:[si]
-                                cmp    al, 'E'
-                                je     sigueInsert
-                                cmp    al, 'C'
-                                je     sigueInsert
-                                cmp    al, 'V'
-                                je     sigueInsert
-                                cmp    al, 'D'
-                                je     sigueInsert
-                                jmp    caracterJuegoInvalido
+                                 xor    di,di
+                                 mov    al, byte ptr es:[si]
+                                 cmp    al, 'E'
+                                 je     sigueInsert
+                                 cmp    al, 'C'
+                                 je     sigueInsert
+                                 cmp    al, 'V'
+                                 je     sigueInsert
+                                 cmp    al, 'D'
+                                 je     sigueInsert
+                                 jmp    caracterJuegoInvalido
 
-    comparacionNegras:          shr    cl,1
-                                jnc    jugadorRepetido
+    comparacionNegras:           shr    cl,1
+                                 jnc    jugadorRepetido
     ;Aca se valida las letras
-                                mov    byte ptr turnoJugador[di], al
-                                inc    si
-                                inc    si
+                                 mov    byte ptr turnoJugador[di], al
+                                 inc    si
+                                 inc    si
 
-                                xor    di,di
-                                mov    al, byte ptr es:[si]
-                                cmp    al, 'e'
-                                je     sigueInsert
-                                cmp    al, 'c'
-                                je     sigueInsert
-                                cmp    al, 'v'
-                                je     sigueInsert
-                                cmp    al, 'd'
-                                je     sigueInsert
-                                jmp    caracterJuegoInvalido
+                                 xor    di,di
+                                 mov    al, byte ptr es:[si]
+                                 cmp    al, 'e'
+                                 je     sigueInsert
+                                 cmp    al, 'c'
+                                 je     sigueInsert
+                                 cmp    al, 'v'
+                                 je     sigueInsert
+                                 cmp    al, 'd'
+                                 je     sigueInsert
+                                 jmp    caracterJuegoInvalido
                                            
-    sigueInsert:                mov    byte ptr pieza[di], al
-                                inc    si
-                                inc    si
+    sigueInsert:                 mov    byte ptr pieza[di], al
+                                 inc    si
+                                 inc    si
 
-                                xor    di,di
-                                mov    al, byte ptr es:[si]
-                                cmp    al, 64
-                                jb     letraNoValidaMensaje
-                                cmp    al, 69
-                                ja     letraNoValidaMensaje
-                                sub    al,65
-                                mov    byte ptr filaEntrada[di], al
-                                inc    si
+                                 xor    di,di
+                                 mov    al, byte ptr es:[si]
+                                 cmp    al, 64
+                                 jb     letraNoValidaMensaje
+                                 cmp    al, 69
+                                 ja     letraNoValidaMensaje
+                                 sub    al,65
+                                 mov    byte ptr filaEntrada[di], al
+                                 inc    si
 
-                                xor    di,di
-                                mov    al, byte ptr es:[si]
-                                sub    al,48
-                                mov    byte ptr columnaEntrada[di], al
+                                 xor    di,di
+                                 mov    al, byte ptr es:[si]
+                                 sub    al,48
+                                 mov    byte ptr columnaEntrada[di], al
 
-    actualizacionCorrecta:      ret
+    actualizacionCorrecta:       ret
 
-    jugadorRepetido:            lea    dx, jugadorRepetidoMsg
-                                mov    ah, 09h
-                                int    21h
-                                jmp    terminarAcualizacionTablero
+    jugadorRepetido:             lea    dx, jugadorRepetidoMsg
+                                 mov    ah, 09h
+                                 int    21h
+                                 jmp    terminarAcualizacionTablero
 
-    caracterJuegoInvalido:      lea    dx, msgCaracterInvalido
-                                mov    ah, 09h
-                                int    21h
-                                jmp    terminarAcualizacionTablero
+    caracterJuegoInvalido:       lea    dx, msgCaracterInvalido
+                                 mov    ah, 09h
+                                 int    21h
+                                 jmp    terminarAcualizacionTablero
 
-    letraJugadorNoValida:       lea    dx, jugadorInvalidoMsg
-                                mov    ah, 09h
-                                int    21h
-                                jmp    terminarAcualizacionTablero
+    letraJugadorNoValida:        lea    dx, jugadorInvalidoMsg
+                                 mov    ah, 09h
+                                 int    21h
+                                 jmp    terminarAcualizacionTablero
 
-    letraNoValidaMensaje:       lea    dx, msgLetraInvalida
-                                mov    ah, 09h
-                                int    21h
+    letraNoValidaMensaje:        lea    dx, msgLetraInvalida
+                                 mov    ah, 09h
+                                 int    21h
                                 
-    terminarAcualizacionTablero:mov    ax, 4C00h
-                                int    21h
+    terminarAcualizacionTablero: mov    ax, 4C00h
+                                 int    21h
 actualizarTablero endp
 
 insertarElementoTablero proc near
 
-                                mov    al, columnaEntrada
-                                mov    columna, al
+                                 mov    al, columnaEntrada
+                                 mov    columna, al
 
-                                mov    al, filaEntrada
-                                mov    fila,al
-                                call   buscaPosition
+                                 mov    al, filaEntrada
+                                 mov    fila,al
+                                 call   buscaPosition
 
-                                mov    al, pieza
-                                cmp    byte ptr tableroActual[di], '.'
-                                je     jugadaValida
-                                jmp    jugadaNoValida
+                                 mov    al, pieza
+                                 cmp    byte ptr tableroActual[di], '.'
+                                 je     jugadaValida
+                                 jmp    jugadaNoValida
 
-    jugadaValida:               mov    byte ptr tableroActual[di], al
-                                ret
+    jugadaValida:                mov    byte ptr tableroActual[di], al
+                                 ret
 
-    jugadaNoValida:             lea    dx, msgCaracterExistente
-                                mov    ah, 09h
-                                int    21h
+    jugadaNoValida:              cmp    banderaError, 7
+                                 je     insertarIAExit
+                                 lea    dx, msgCaracterExistente
+                                 mov    ah, 09h
+                                 int    21h
               
-                                mov    ax, 4C00h
-                                int    21h
+                                 mov    ax, 4C00h
+                                 int    21h
+
+    insertarIAExit:              mov    banderaError,1
+                                 ret
 insertarElementoTablero endP
 
 addNuevaJugada proc near
-                                call   cargarTablero                        ;Carga tablero
-                                call   actualizarTablero                    ;Obtiene datos entrada
+                                 call   cargarTablero                       ;Carga tablero
+                                 call   actualizarTablero                   ;Obtiene datos entrada
                                 
-                                call   insertarElementoTablero
+                                 call   insertarElementoTablero
 
-                                call   recargarVariables
-                                call   validacionLinea
+                                 call   recargarVariables
+                                 call   validacionLinea
 
-                                call   recargarVariables
-                                call   definirCuadrante
+                                 call   recargarVariables
+                                 call   definirCuadrante
 
-                                call   recargarVariables
-                                call   validacionZona
+                                 call   recargarVariables
+                                 call   validacionZona
 
-                                call   recargarVariables
-                                call   verificarGanadorZona
+                                 call   recargarVariables
+                                 call   verificarGanadorZona
 
-                                call   recargarVariables
-                                call   verificarGanadorColu
+                                 call   recargarVariables
+                                 call   verificarGanadorColu
 
-                                call   cerrarZonaCorrecta
+                                 call   cerrarZonaCorrecta
 
 addNuevaJugada endp
 
+validarTableroIa proc near
+                                 call   lectorPiezas
+                                 mov    cl,jugadorActual
+                                
+                                 xor    di,di
+                                 mov    al, turnoJugador
+                                 cmp    al, 'B'
+                                 je     comparacionBlanas1
+                                 cmp    al, 'N'
+                                 je     comparacionNegras1
+                                 jmp    letraJugadorNoValida1
+
+    comparacionBlanas1:          shr    cl,1
+                                 jc     jugadorRepetido1
+                                 jmp    actualizacionCorrecta1
+
+    comparacionNegras1:          shr    cl,1
+                                 jnc    jugadorRepetido1
+
+    actualizacionCorrecta1:      ret
+
+    jugadorRepetido1:            mov    banderaError,1
+                                 jmp    terminarAcualizacionTablero1
+
+    letraJugadorNoValida1:       mov    banderaError,1
+                                 jmp    terminarAcualizacionTablero1
+                                
+    terminarAcualizacionTablero1:ret
+validarTableroIa endp
+
 printAX proc near
-                                push   AX
-                                push   BX
-                                push   CX
-                                push   DX
+                                 push   AX
+                                 push   BX
+                                 push   CX
+                                 push   DX
 
-                                xor    cx, cx
-                                mov    bx, 10
-    ciclo1PAX:                  xor    dx, dx
-                                div    bx
-                                push   dx
-                                inc    cx
-                                cmp    ax, 0
-                                jne    ciclo1PAX
-                                mov    ah, 02h
-    ciclo2PAX:                  pop    DX
-                                add    dl, 30h
-                                int    21h
-                                loop   ciclo2PAX
+                                 xor    cx, cx
+                                 mov    bx, 10
+    ciclo1PAX:                   xor    dx, dx
+                                 div    bx
+                                 push   dx
+                                 inc    cx
+                                 cmp    ax, 0
+                                 jne    ciclo1PAX
+                                 mov    ah, 02h
+    ciclo2PAX:                   pop    DX
+                                 add    dl, 30h
+                                 int    21h
+                                 loop   ciclo2PAX
 
-                                pop    DX
-                                pop    CX
-                                pop    BX
-                                pop    AX
-                                ret
+                                 pop    DX
+                                 pop    CX
+                                 pop    BX
+                                 pop    AX
+                                 ret
 printAX endP
 
 Randomize Proc
- 
-                                push   ax
-                                push   cx
-                                push   dx
+                                 push   ax
+                                 push   cx
+                                 push   dx
 
-                                mov    ah, 2Ch
-                                int    21h
-  
-   
+                                 mov    ah, 2Ch
+                                 int    21h
+                                 mov    word ptr Semilla, dx
 
-  
-                                mov    word ptr Semilla, dx
-
-                                pop    dx
-                                pop    cx
-                                pop    ax
-
-                                ret
-
+                                 pop    dx
+                                 pop    cx
+                                 pop    ax
+                                 ret
 Randomize EndP
 
 Random Proc
-                                push   dx
+                                 push   dx
+                                 mov    ax, Semilla
+                                 inc    ax
+                                 inc    ax
+                                 mul    ax
+                                 xchg   ah, al
+                                 mov    Semilla, ax
 
-                                mov    ax, Semilla
+                                 xor    dx, dx
+                                 div    bx
 
-                                inc    ax
-                                inc    ax
-                                mul    ax
-                                xchg   ah, al
+                                 mov    ax, dx
 
-                                mov    Semilla, ax
+                                 pop    dx
 
-                                xor    dx, dx
-                                div    bx
-
-                                mov    ax, dx
-
-                                pop    dx
-
-                                ret
+                                 ret
 Random Endp
 
-movimientoIA proc
+movimientoIA proc near
 
-                                call   Randomize
+    jugador:                     call   Randomize
+                                 mov    bx, 2
+                                 call   random
+                        
+                                 cmp    al, 0
+                                 je     negro
+                                 jmp    blanco
+                               
+    negro:                       mov    byte ptr turnoJugador[0],'N'
 
-                                mov    cx, 1
-                                mov    bx, 4
+    piezaNegraRan:               call   Randomize
+                                 mov    bx, 4
+                                 call   random
+                                 cmp    al,0
+                                 je     esferaN
+                                 cmp    al,1
+                                 je     cuboNegra
+                                 cmp    al,2
+                                 je     dNegro
+                                 cmp    al,3
+                                 je     vNegro
 
-    ciclo:                      call   random
-    ;call   printAX
+    esferaN:                     mov    byte ptr pieza[0],'e'
+                                 jmp    filaIA
 
-                                mov    dl, 32
-                                mov    ah, 02h
-                                int    21h
-       
-                                loop   ciclo
-                                ret
+    cuboNegra:                   mov    byte ptr pieza[0],'c'
+                                 jmp    filaIA
 
+    dNegro:                      mov    byte ptr pieza[0],'d'
+                                 jmp    filaIA
+
+    vNegro:                      mov    byte ptr pieza[0],'v'
+                                 jmp    filaIA
+
+    blanco:                      mov    byte ptr turnoJugador[0],'B'
+
+    piezaBlancaRan:              call   Randomize
+                                 mov    bx, 4
+                                 call   random
+                                 cmp    al,0
+                                 je     esferaB
+                                 cmp    al,1
+                                 je     cuboB
+                                 cmp    al,2
+                                 je     dBlanco
+                                 cmp    al,3
+                                 je     vBlanco
+
+    esferaB:                     mov    byte ptr pieza[0],'E'
+                                 jmp    filaIA
+
+    cuboB:                       mov    byte ptr pieza[0],'C'
+                                 jmp    filaIA
+
+    dBlanco:                     mov    byte ptr pieza[0],'D'
+                                 jmp    filaIA
+
+    vBlanco:                     mov    byte ptr pieza[0],'V'
+
+    filaIA:                      call   Randomize
+                                 mov    bx, 4
+                                 call   random
+                                 mov    filaEntrada,AL
+                          
+    columnaIA:                   call   Randomize
+                                 mov    bx, 4
+                                 call   random
+                                 mov    columnaEntrada,AL
+                          
+                                 ret
 movimientoIA endp
 
 
 IaController proc near
+                                 call   cargarTablero                       ;Se carga tablero con patida anterior
 
-                                call   movimientoIA
-    ; mov    bx,1
-    ; mul    ax
-    ; mov    ax,bx
-    ; call   printAX
+    loopMoviminetoIa:            mov    banderaError, 7
+                                 call   movimientoIA
+                                 call   validarTableroIa                    ;Valida datos correctos
 
-                                mov    bx,1
-                                mul    ax
-                                mov    ax,bx
-                                call   printAX
-                                ret
+                                 cmp    banderaError,1
+                                 je     loopMoviminetoIa
+
+                                 call   insertarElementoTablero
+                                 cmp    banderaError,1
+                                 je     loopMoviminetoIa
+
+
+                                 lea    dx, msgDatoUsabelIa
+                                 mov    ah, 09h
+                                 int    21h
+                                 call   cerrarZonaCorrecta
+    
+                                 ret
 
 IaController endp
 
 
 
 cerrarZonaCorrecta proc near
-                                xor    si,si
-                                xor    di,di
+                                 xor    si,si
+                                 xor    di,di
 
-    restartBx10:                mov    bx,4
+    restartBx10:                 mov    bx,4
 
-                                mov    cx,16
-    loopInsertDi:               cmp    bx, 0
-                                je     add10Bx
-                                mov    al, byte ptr tableroActual[si]
-                                mov    byte ptr Buffy[di], al
-                                inc    di
-                                inc    si
-                                dec    bx
-                                loop   loopInsertDi
+                                 mov    cx,16
+    loopInsertDi:                cmp    bx, 0
+                                 je     add10Bx
+                                 mov    al, byte ptr tableroActual[si]
+                                 mov    byte ptr Buffy[di], al
+                                 inc    di
+                                 inc    si
+                                 dec    bx
+                                 loop   loopInsertDi
 
-    add10Bx:                    cmp    si, 16
-                                je     createToFile
-                                mov    byte ptr Buffy[di], 10
-                                inc    di
-                                jmp    restartBx10
+    add10Bx:                     cmp    si, 16
+                                 je     createToFile
+                                 mov    byte ptr Buffy[di], 10
+                                 inc    di
+                                 jmp    restartBx10
                                 
-    createToFile:               mov    ah, 3Ch
-                                lea    dx, nombArchivo
+    createToFile:                mov    ah, 3Ch
+                                 lea    dx, nombArchivo
                               
-                                xor    cx, cx
-                                int    21h
-                                jc     auxErrorSobre
-                                mov    handleS, ax
+                                 xor    cx, cx
+                                 int    21h
+                                 jc     auxErrorSobre
+                                 mov    handleS, ax
 
-                                mov    cx, 19
-                                lea    dx, Buffy
-                                mov    bx, handleS
+                                 mov    cx, 19
+                                 lea    dx, Buffy
+                                 mov    bx, handleS
 
-                                mov    ah, 40h
-                                int    21h
-                                jc     auxErrorSobre
-                                jmp    cerrar
+                                 mov    ah, 40h
+                                 int    21h
+                                 jc     auxErrorSobre
+                                 jmp    cerrar
 
-    auxErrorSobre:              lea    dx, msgETablero
-                                mov    ah, 09h
-                                int    21h
+    auxErrorSobre:               lea    dx, msgETablero
+                                 mov    ah, 09h
+                                 int    21h
 
-                                jmp    salir
+                                 jmp    salir
 
-    cerrar:                     
-                                mov    ah, 3Eh                              ; cerrar el archivo
-                                mov    bx, handleS
-                                int    21h
-                                jmp    salir
+    cerrar:                      
+                                 mov    ah, 3Eh                             ; cerrar el archivo
+                                 mov    bx, handleS
+                                 int    21h
+                                 jmp    salir
 
-    salir:                      
-                                mov    ax, 4C00h
-                                int    21h
+    salir:                       lea    dx, msgPiezaInsertada
+                                 mov    ah, 09h
+                                 int    21h
+
+    ;  mov    al,pieza
+    ;  xor    ah,ah
+    ;  call   printAX
+
+    ;  mov    ah, 02h
+    ;  mov    dl, 32
+    ;  int    21h
+
+                                 mov    al,filaEntrada
+                                 xor    ah,ah
+    ;add    ax,17
+                                 call   printAX
+
+                                 mov    al,columnaEntrada
+                                 xor    ah,ah
+                                 call   printAX
+
+
+                                 mov    ax, 4C00h
+                                 int    21h
 cerrarZonaCorrecta endp
 
-cerrarZonaIncorrecta proc near                                              ;Creo que no es nesesario
-                                xor    si,si
-                                xor    di,di
+    main:                        mov    ax, ds
+                                 mov    es, ax
+                                 mov    ax, datos
+                                 mov    ds, ax
+                                 mov    ax, pila
+                                 mov    ss, ax
 
-    restartBx101:               mov    bx,4
-
-                                mov    cx,16
-    loopInsertDi1:              cmp    bx, 0
-                                je     add10Bx1
-                                mov    al, byte ptr tableroTemporal [si]
-                                mov    byte ptr Buffy[di], al
-                                inc    di
-                                inc    si
-                                dec    bx
-                                loop   loopInsertDi1
-
-    add10Bx1:                   cmp    si, 16
-                                je     createToFile1
-                                mov    byte ptr Buffy[di], 10
-                                inc    di
-                                jmp    restartBx101
-                                
-    createToFile1:              mov    ah, 3Ch
-                                lea    dx, nombArchivo
-                              
-                                xor    cx, cx
-                                int    21h
-                                jc     auxErrorSobre1
-                                mov    handleS, ax
-
-                                mov    cx, 19
-                                lea    dx, Buffy
-                                mov    bx, handleS
-
-                                mov    ah, 40h
-                                int    21h
-                                jc     auxErrorSobre1
-                                jmp    cerrar1
-
-    auxErrorSobre1:             lea    dx, msgETablero
-                                mov    ah, 09h
-                                int    21h
-
-                                jmp    salir1
-
-    cerrar1:                    
-                                mov    ah, 3Eh                              ; cerrar el archivo
-                                mov    bx, handleS
-                                int    21h
-                                jmp    salir1
-
-    salir1:                     lea    dx, msgLetraInvalida
-                                mov    ah, 09h
-                                int    21h
-
-                                mov    ax, 4C00h
-                                int    21h
-
-cerrarZonaIncorrecta endp
-
-
-    main:                       mov    ax, ds
-                                mov    es, ax
-                                mov    ax, datos
-                                mov    ds, ax
-                                mov    ax, pila
-                                mov    ss, ax
+    ;call   movimientoIA
 
     ;call   IaController
-                                mov    si, 80h
-                                mov    cl, byte ptr es:[si]
-                                xor    ch, ch
-                                xor    di, di
-                                inc    si
-                                inc    si
-                                dec    cx
-                                mov    contadorCx,cx
+                                 mov    si, 80h
+                                 mov    cl, byte ptr es:[si]
+                                 xor    ch, ch
+                                 xor    di, di
+                                 inc    si
+                                 inc    si
+                                 dec    cx
+                                 mov    contadorCx,cx
 
-                                mov    al, byte ptr es:[si]                 ;Lo que escribe el usario
-                                mov    byte ptr letraComando[di], al        ;Se escribe en el rotulo
-                                inc    si
-                                call   indexOpciones
+                                 mov    al, byte ptr es:[si]                ;Lo que escribe el usario
+                                 mov    byte ptr letraComando[di], al       ;Se escribe en el rotulo
+                                 inc    si
+                                 call   indexOpciones
 
-                                mov    ah, 09h
-                                lea    dx, msgProgramClose
-                                int    21h
+                                 mov    ah, 09h
+                                 lea    dx, msgProgramClose
+                                 int    21h
 
-                                mov    ax, 4C00h
-                                int    21h
+                                 mov    ax, 4C00h
+                                 int    21h
 codigo ends
 
 end main                                
